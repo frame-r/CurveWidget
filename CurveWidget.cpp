@@ -11,7 +11,7 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 	setPalette(Pal);
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
-	resize(QSize(screenSize.width() * 0.5f, screenSize.height() * 0.5f));
+	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
 
 	NormalizeView();
 }

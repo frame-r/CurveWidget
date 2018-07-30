@@ -14,7 +14,7 @@ CurveWidgetDialog::CurveWidgetDialog(QWidget *parent) :
 
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
-	resize(QSize(screenSize.width() * 0.5f, screenSize.height() * 0.5f));
+	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
 }
 
 CurveWidgetDialog::~CurveWidgetDialog()
@@ -22,12 +22,3 @@ CurveWidgetDialog::~CurveWidgetDialog()
 	delete ui;
 }
 
-void CurveWidgetDialog::on_pushButton_clicked()
-{
-	close();
-}
-
-void CurveWidgetDialog::on_pushButton_2_clicked()
-{
-	close();
-}
