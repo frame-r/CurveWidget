@@ -12,6 +12,10 @@ CurveWidgetDialog::CurveWidgetDialog(QWidget *parent) :
 	//setWindowFlags(Qt::Tool);
 	//setModal(true);
 
+	Qt::WindowFlags flags = windowFlags();
+	flags = flags & (~Qt::WindowContextHelpButtonHint);
+	setWindowFlags(flags);
+
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
 	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));

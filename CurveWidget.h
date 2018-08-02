@@ -19,14 +19,22 @@ public slots:
 protected:
 	void paintEvent(QPaintEvent *e) override;
 
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
+
 private:
-	int getLinesUnit();
+	float GetLinesUnit();
 	void NormalizeView();
 	QPoint ToCanvasCoordinates(const QPoint& pos);
 	QPoint ToAnalyticCoordinates(const QPoint& pos);
 
 private:
-	int scale{100};
+	float scale{100};
+	int dragging{0};
+	QPoint startMousePos;
+	QPoint startPixelsOffset;
 	QPoint pixelsOffset;
 
 };
