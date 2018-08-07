@@ -44,7 +44,6 @@ private:
 	float GetAnalyticUnitInPixels() { return scale; }
 	float GetPixelInAnalyticUnit() { return 1 / scale; }
 
-
 private:
 
 	// Number of pixels in one analytic unit

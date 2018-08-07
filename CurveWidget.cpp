@@ -11,11 +11,19 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 	Pal.setColor(QPalette::Background, QColor(38, 38, 38));
 	setAutoFillBackground(true);
 	setPalette(Pal);
+
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
 	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
 
 	NormalizeView();
+}
+
+void drawCorner(const QPoint& center, QPainter* painter)
+{
+	static const int size1 = 3;
+	painter->setBrush(QBrush("#ffffff"));
+	painter->drawRect(center.x() - size1, center.y() - size1, size1 * 2, size1 * 2);
 }
 
 void CurveWidget::paintEvent(QPaintEvent *e)
@@ -25,7 +33,6 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 
 	painter.setRenderHint(QPainter::Antialiasing, false);
 	int gridWidth = 1;
-
 
 	//
 	// Thin grid lines
@@ -58,23 +65,42 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//	painter.drawLine(0, i * GetAnalyticUnitInPixels(), size().width(), i * GetAnalyticUnitInPixels());
 	//}
 
+
+	QColor gridColorThin(46, 46, 46);
+	painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
+
+	// horizontal
+	float y = ToAnalyticCoordinates(QPoint(0, 0)).y();
+	int y_min = ceil(y);
+	y = ToAnalyticCoordinates(QPoint(0, size().height())).y();
+	int y_max = floor(y);
+	for (int i = y_max; i <= y_min; i++)
+	{
+		int pp = ToCanvasCoordinates(QPointF(0, i)).y();
+		painter.drawLine(0, pp, size().width(), pp);
+	}
+
+	// vertical
+	float x = ToAnalyticCoordinates(QPoint(0, 0)).x();
+	int x_min = ceil(x);
+	x = ToAnalyticCoordinates(QPoint(size().width(), 0)).x();
+	int x_max = floor(x);
+	for (int i = x_min; i <= x_max; i++)
+	{
+		int pp = ToCanvasCoordinates(QPointF(i, 0)).x();
+		painter.drawLine(pp, 0, pp, size().height());
+	}
+
+	//
+	// Axis
+	//
 	QColor gridColorFat(80, 80, 80);
 	painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	//int unitHorizontalLines = (int)(GetAnalyticUnitInPixels() / size().height());
-	//for (int i = 1; i <= unitHorizontalLines; i++)
-	//{
-	//}
-	//float y = ToAnalyticCoordinates(QPoint(0, 0)).y();
-	//int y_int = ceil(y);
-	//for (int i = 1; i <= size().height() / GetAnalyticUnitInPixels(); i++)
-
-	// Axis
 	QPoint p = ToCanvasCoordinates(QPointF(0,0));
 	if (0 <= p.x() && p.x() <= size().width())
 		painter.drawLine(p.x(), 0, p.x(), size().height());
 	if (0 <= p.y() && p.y() <= size().height())
 		painter.drawLine(0, p.y(), size().width(), p.y());
-
 
 	/* Make the Gradient for this line. */
 	//const QPointF start{ 0,0 };
@@ -86,13 +112,19 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//color.setAlphaF(0.1); //change alpha again
 	//gradient.setColorAt(1, color );
 
-
 	//
 	// Curves
 	//
 	painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
 	painter.drawLine(ToCanvasCoordinates(QPoint(0,0)), ToCanvasCoordinates(QPoint(1, 1)));
 
+	//
+	// Rects
+	//
+	QColor cornerColor(0, 0, 0);
+	painter.setPen(QPen(cornerColor, 1, Qt::SolidLine, Qt::FlatCap));
+	drawCorner(ToCanvasCoordinates(QPointF(1, 1)), &painter);
+	drawCorner(ToCanvasCoordinates(QPointF(0, 0)), &painter);
 }
 
 void CurveWidget::mousePressEvent(QMouseEvent *event)
@@ -153,5 +185,5 @@ QPoint CurveWidget::ToCanvasCoordinates(const QPointF &pos)
 
 QPointF CurveWidget::ToAnalyticCoordinates(const QPoint &pos)
 {
-	return QPointF((pos.x() - pixelsOffset.x()) / scale, (-pos.y() + pixelsOffset.y()) / scale );
+	return QPointF((pos.x() - pixelsOffset.x()) / scale, (-pos.y() + pixelsOffset.y()) / scale);
 }
