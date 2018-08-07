@@ -30,33 +30,50 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//
 	// Thin grid lines
 	//
-	QColor gridColorThin(46, 46, 46);
-	painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	for (int i = 1; i <= size().width() * 10 / GetLinesUnit(); i++)
-	{
-		painter.drawLine(i * GetLinesUnit() / 10, 0, i * GetLinesUnit() / 10, size().height());
-	}
-	painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	for (int i = 1; i <= size().height() * 10 / GetLinesUnit(); i++)
-	{
-		painter.drawLine(0, i * GetLinesUnit() / 10, size().width(), i * GetLinesUnit() / 10);
-	}
+	//QColor gridColorThin(46, 46, 46);
+	//painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
+	//for (int i = 1; i <= size().width() * 10 / GetAnalyticUnitInPixels(); i++)
+	//{
+	//	painter.drawLine(i * GetAnalyticUnitInPixels() / 10, 0, i * GetAnalyticUnitInPixels() / 10, size().height());
+	//}
+	//painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
+	//for (int i = 1; i <= size().height() * 10 / GetAnalyticUnitInPixels(); i++)
+	//{
+	//	painter.drawLine(0, i * GetAnalyticUnitInPixels() / 10, size().width(), i * GetAnalyticUnitInPixels() / 10);
+	//}
 
 
 	//
 	// Fat grid lines
 	//
-	QColor gridColorFat(90, 90, 90);
+	//QColor gridColorFat(80, 80, 80);
+	//painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
+	//for (int i = 1; i <= size().width() / GetAnalyticUnitInPixels(); i++)
+	//{
+	//	painter.drawLine(i * GetAnalyticUnitInPixels(), 0, i * GetAnalyticUnitInPixels(), size().height());
+	//}
+	//painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
+	//for (int i = 1; i <= size().height() / GetAnalyticUnitInPixels(); i++)
+	//{
+	//	painter.drawLine(0, i * GetAnalyticUnitInPixels(), size().width(), i * GetAnalyticUnitInPixels());
+	//}
+
+	QColor gridColorFat(80, 80, 80);
 	painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	for (int i = 1; i <= size().width() / GetLinesUnit(); i++)
-	{
-		painter.drawLine(i * GetLinesUnit(), 0, i * GetLinesUnit(), size().height());
-	}
-	painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	for (int i = 1; i <= size().height() / GetLinesUnit(); i++)
-	{
-		painter.drawLine(0, i * GetLinesUnit(), size().width(), i * GetLinesUnit());
-	}
+	//int unitHorizontalLines = (int)(GetAnalyticUnitInPixels() / size().height());
+	//for (int i = 1; i <= unitHorizontalLines; i++)
+	//{
+	//}
+	//float y = ToAnalyticCoordinates(QPoint(0, 0)).y();
+	//int y_int = ceil(y);
+	//for (int i = 1; i <= size().height() / GetAnalyticUnitInPixels(); i++)
+
+	// Axis
+	QPoint p = ToCanvasCoordinates(QPointF(0,0));
+	if (0 <= p.x() && p.x() <= size().width())
+		painter.drawLine(p.x(), 0, p.x(), size().height());
+	if (0 <= p.y() && p.y() <= size().height())
+		painter.drawLine(0, p.y(), size().width(), p.y());
 
 
 	/* Make the Gradient for this line. */
@@ -74,7 +91,7 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	// Curves
 	//
 	painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
-	painter.drawLine(ToCanvasCoordinates(QPoint(0,0)), ToCanvasCoordinates(QPoint(GetLinesUnit(), GetLinesUnit())));
+	painter.drawLine(ToCanvasCoordinates(QPoint(0,0)), ToCanvasCoordinates(QPoint(1, 1)));
 
 }
 
@@ -104,30 +121,37 @@ void CurveWidget::mouseMoveEvent(QMouseEvent *event)
 
 void CurveWidget::wheelEvent(QWheelEvent *event)
 {
-	int numDegrees = event->delta() / 8;
-	int numSteps = numDegrees / 15;
-	scale += float(numSteps);
+	int numDegrees = event->delta();
+	scale *= float((numDegrees > 0) ? 1.05f : 0.95f);
 	event->accept();
 	repaint();
 }
 
-float CurveWidget::GetLinesUnit()
+void CurveWidget::resizeEvent(QResizeEvent *event)
 {
-	return scale;
+	float tempScaleX = (float)event->size().width() / event->oldSize().width();
+	float tempScaleY = (float)event->size().height() / event->oldSize().height();
+	if (tempScaleX < 0.0001f || tempScaleY < 0.0001f)
+	{
+		QWidget::resizeEvent(event);
+		return;
+	}
+	pixelsOffset = QPointF((float)pixelsOffset.x() * tempScaleX, pixelsOffset.y() * tempScaleY);
+	QWidget::resizeEvent(event);
 }
 
 void CurveWidget::NormalizeView()
 {
-	pixelsOffset = QPoint(size().width() / 2, size().height() / 2);
+	pixelsOffset = QPointF(size().width() / 2, size().height() / 2);
 	scale = 100.0f;
 }
 
-QPoint CurveWidget::ToCanvasCoordinates(const QPoint &pos)
+QPoint CurveWidget::ToCanvasCoordinates(const QPointF &pos)
 {
-	return QPoint(pixelsOffset.x() + pos.x(), pixelsOffset.y() - pos.y());
+	return QPoint(pos.x() * scale + pixelsOffset.x(), -pos.y() * scale + pixelsOffset.y());
 }
 
-QPoint CurveWidget::ToAnalyticCoordinates(const QPoint &pos)
+QPointF CurveWidget::ToAnalyticCoordinates(const QPoint &pos)
 {
-	return QPoint(pos.x() - pixelsOffset.x(), pixelsOffset.y() - pos.y());
+	return QPointF((pos.x() - pixelsOffset.x()) / scale, (-pos.y() + pixelsOffset.y()) / scale );
 }

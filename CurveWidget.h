@@ -17,26 +17,46 @@ signals:
 public slots:
 
 protected:
-	void paintEvent(QPaintEvent *e) override;
 
+	void paintEvent(QPaintEvent *e) override;
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
+	void resizeEvent(QResizeEvent *event) override;
 
-private:
-	float GetLinesUnit();
+
+public:
+
 	void NormalizeView();
-	QPoint ToCanvasCoordinates(const QPoint& pos);
-	QPoint ToAnalyticCoordinates(const QPoint& pos);
 
 private:
+
+	// Analytic Coordinate System	- The coordinate system in which the coordinates of the curve are specified
+	// Canvas Coordinate System		- Coordinates inside the widget. Top left - (0, 0)
+
+	//
+	QPoint ToCanvasCoordinates(const QPointF& analyticPos);
+
+	//
+	QPointF ToAnalyticCoordinates(const QPoint& canvasPos);
+
+	float GetAnalyticUnitInPixels() { return scale; }
+	float GetPixelInAnalyticUnit() { return 1 / scale; }
+
+
+private:
+
+	// Number of pixels in one analytic unit
 	float scale{100};
+
+	// Offset analytic coordinate system relative to Top Left widget point in pixels
+	QPointF pixelsOffset;
+
+	// Dragging temp varibales
 	int dragging{0};
 	QPoint startMousePos;
-	QPoint startPixelsOffset;
-	QPoint pixelsOffset;
-
+	QPointF startPixelsOffset;
 };
 
 #endif // CURVEWIDGET_H
