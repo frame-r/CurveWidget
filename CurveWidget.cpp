@@ -29,9 +29,9 @@ void drawCorner(const QPoint& center, QPainter* painter)
 void CurveWidget::paintEvent(QPaintEvent *e)
 {
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
-	painter.setRenderHint(QPainter::Antialiasing, false);
+	//painter.setRenderHint(QPainter::Antialiasing, false);
 	int gridWidth = 1;
 
 	//
@@ -112,11 +112,22 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//color.setAlphaF(0.1); //change alpha again
 	//gradient.setColorAt(1, color );
 
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
+
 	//
 	// Curves
 	//
 	painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
 	painter.drawLine(ToCanvasCoordinates(QPoint(0,0)), ToCanvasCoordinates(QPoint(1, 1)));
+
+
+	QPainterPath path;
+	path.moveTo(20, 80);
+	path.lineTo(20, 30);
+	path.cubicTo(80, 0, 50, 50, 80, 80);
+	painter.drawPath(path);
+
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
 	//
 	// Rects
@@ -129,7 +140,7 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 
 void CurveWidget::mousePressEvent(QMouseEvent *event)
 {
-	if (event->button() == Qt::MouseButton::MiddleButton)
+	if (event->button() == Qt::MouseButton::LeftButton)
 	{
 		dragging = 1;
 		startMousePos = event->pos();
