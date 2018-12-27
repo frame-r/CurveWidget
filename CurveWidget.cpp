@@ -127,7 +127,7 @@ void drawCorner(const QPoint& center, QPainter* painter)
 void CurveWidget::paintEvent(QPaintEvent *e)
 {
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
 	painter.setRenderHint(QPainter::Antialiasing, false);
 	int gridWidth = 1;
@@ -210,6 +210,8 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//color.setAlphaF(0.1); //change alpha again
 	//gradient.setColorAt(1, color );
 
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
+
 	//
 	// Lines
 	//
@@ -234,6 +236,8 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 		CurveSegment seg = _currentCurve.FetchSegment(i);
 		painter.drawLine(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1));
 	}
+
+	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
 	//
 	// Rectangle dots
