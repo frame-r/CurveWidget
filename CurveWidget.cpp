@@ -4,9 +4,42 @@
 #include <QApplication>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QMenu>
+#include <QAction>
+
+const int MinimumSelectDotsDistance = 6;
+const QColor cornerColor(0, 0, 0);
+const QColor selectionCornerColor(255, 0, 0);
+
+inline float clamp(float n, float lower, float upper)
+{
+	return std::max(lower, std::min(n, upper));
+}
+
+float QPointLen(const QPoint& q)
+{
+	return sqrt((float)q.x() * q.x() + q.y() * q.y());
+}
+
+float QPointDot(const QPoint& q0, const QPoint& q1)
+{
+	return (float)q0.x() * q1.x() + q0.y() * q1.y();
+}
+
+float PointToSegmentDistance(const QPoint& a, const QPoint& b, const QPoint& p)
+{
+	QPoint n = b - a;
+	QPoint pa = a - p;
+	QPoint c = n * (QPointDot( pa, n ) / QPointDot( n, n ));
+	QPoint d = pa - c;
+	return sqrt( QPointDot( d, d ) );
+}
+
 
 CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 {
+	setMouseTracking(true);
+
 	QPalette Pal(palette());
 	Pal.setColor(QPalette::Background, QColor(38, 38, 38));
 	setAutoFillBackground(true);
@@ -16,7 +49,72 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 	QRect screenSize = desktop->availableGeometry(this);
 	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
 
+	this->setContextMenuPolicy(Qt::CustomContextMenu);
+
+	connect(this, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
+
+	_timer = std::make_unique<QTimer>(this);
+	connect(_timer.get(), SIGNAL(timeout()), this, SLOT(_OnTimer()));
+	_timer->start(16);
+
 	NormalizeView();
+}
+
+void CurveWidget::ShowContextMenu(const QPoint &pos)
+{
+   QMenu contextMenu(tr("Context menu"), this);
+
+   QAction action1("Add Point", this);
+   connect(&action1, SIGNAL(triggered()), this, SLOT(removeDataPoint()));
+   contextMenu.addAction(&action1);
+
+   QAction action2("Remove Point", this);
+   connect(&action2, SIGNAL(triggered()), this, SLOT(removeDataPoint()));
+   contextMenu.addAction(&action2);
+
+   contextMenu.exec(mapToGlobal(pos));
+}
+
+void CurveWidget::_OnTimer()
+{
+	int _mouseUnderDot = -1;
+	for (int i = 0; i < _currentCurve.PointsNum(); i++)
+	{
+		auto dist = (mousePosition - ToCanvasCoordinates(_currentCurve.FetchPoint(i).pos)).manhattanLength();
+//		if (i == 0)
+//			qDebug() << dist;
+		if (dist < MinimumSelectDotsDistance)
+		{
+			_mouseUnderDot = i;
+			break;
+		}
+	}
+
+	int _mouseUnderSeg = -1;
+	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
+	{
+		CurveSegment seg = _currentCurve.FetchSegment(i);
+		float dist = PointToSegmentDistance(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1), mousePosition);
+				if (i == 0)
+					qDebug() << dist;
+		if (dist < MinimumSelectDotsDistance)
+		{
+			_mouseUnderSeg = i;
+			break;
+		}
+	}
+
+	if (_mouseUnderDot != -1 && _mouseUnderSeg != -1)
+	{
+		_mouseUnderSeg = -1;
+	}
+
+	if (_mouseUnderDot != mouseUnderDot || _mouseUnderSeg != mouseUnderSeg)
+	{
+		mouseUnderDot = _mouseUnderDot;
+		mouseUnderSeg = _mouseUnderSeg;
+		repaint();
+	}
 }
 
 void drawCorner(const QPoint& center, QPainter* painter)
@@ -29,9 +127,9 @@ void drawCorner(const QPoint& center, QPainter* painter)
 void CurveWidget::paintEvent(QPaintEvent *e)
 {
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
+	painter.setRenderHint(QPainter::Antialiasing, true);
 
-	//painter.setRenderHint(QPainter::Antialiasing, false);
+	painter.setRenderHint(QPainter::Antialiasing, false);
 	int gridWidth = 1;
 
 	//
@@ -112,52 +210,69 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	//color.setAlphaF(0.1); //change alpha again
 	//gradient.setColorAt(1, color );
 
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
-
 	//
-	// Curves
+	// Lines
 	//
-	painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
-	painter.drawLine(ToCanvasCoordinates(QPoint(0,0)), ToCanvasCoordinates(QPoint(1, 1)));
+	//painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
+	int s = 1;
+	painter.setPen(QPen(Qt::red, 1, Qt::SolidLine, Qt::FlatCap));
 
-
-	QPainterPath path;
-	path.moveTo(20, 80);
-	path.lineTo(20, 30);
-	path.cubicTo(80, 0, 50, 50, 80, 80);
-	painter.drawPath(path);
-
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
-
-	//
-	// Rects
-	//
-	QColor cornerColor(0, 0, 0);
-	painter.setPen(QPen(cornerColor, 1, Qt::SolidLine, Qt::FlatCap));
-	drawCorner(ToCanvasCoordinates(QPointF(1, 1)), &painter);
-	drawCorner(ToCanvasCoordinates(QPointF(0, 0)), &painter);
-}
-
-void CurveWidget::mousePressEvent(QMouseEvent *event)
-{
-	if (event->button() == Qt::MouseButton::LeftButton)
+	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
 	{
-		dragging = 1;
-		startMousePos = event->pos();
-		startPixelsOffset = pixelsOffset;
+		int nextSize = 1;
+		if (mouseUnderSeg == i)
+		{
+			nextSize = 2;
+		}
+
+		if (nextSize != s)
+		{
+			s = nextSize;
+			painter.setPen(QPen(Qt::red, nextSize, Qt::SolidLine, Qt::FlatCap));
+		}
+
+		CurveSegment seg = _currentCurve.FetchSegment(i);
+		painter.drawLine(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1));
 	}
+
+	//
+	// Rectangle dots
+	//
+	QColor col = cornerColor;
+	painter.setPen(QPen(col, 1, Qt::SolidLine, Qt::FlatCap));
+
+	for (int i = 0; i < _currentCurve.PointsNum(); i++)
+	{
+		QColor nextCol = cornerColor;
+		if (mouseUnderDot == i)
+		{
+			nextCol = selectionCornerColor;
+		}
+
+		if (col != nextCol)
+		{
+			col = nextCol;
+			painter.setPen(QPen(col, 1, Qt::SolidLine, Qt::FlatCap));
+		}
+
+		CurvePoint p = _currentCurve.FetchPoint(i);
+		drawCorner(ToCanvasCoordinates(p.pos), &painter);
+	}
+
 }
 
 void CurveWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-	dragging = 0;
+	isMouseDragging = 0;
 }
 
 void CurveWidget::mouseMoveEvent(QMouseEvent *event)
 {
-	if (dragging)
+	mousePosition = event->pos();
+
+	if (isMouseDragging)
 	{
-		pixelsOffset = startPixelsOffset + (event->pos() - startMousePos);
+		centerOffset = dragStartPixelsOffset + (event->pos() - dragStartMousePos);
 		repaint();
 	}
 }
@@ -165,7 +280,7 @@ void CurveWidget::mouseMoveEvent(QMouseEvent *event)
 void CurveWidget::wheelEvent(QWheelEvent *event)
 {
 	int numDegrees = event->delta();
-	scale *= float((numDegrees > 0) ? 1.05f : 0.95f);
+	pixelsInUnitScale *= float((numDegrees > 0) ? 1.05f : 0.95f);
 	event->accept();
 	repaint();
 }
@@ -179,22 +294,33 @@ void CurveWidget::resizeEvent(QResizeEvent *event)
 		QWidget::resizeEvent(event);
 		return;
 	}
-	pixelsOffset = QPointF((float)pixelsOffset.x() * tempScaleX, pixelsOffset.y() * tempScaleY);
+	centerOffset = QPointF((float)centerOffset.x() * tempScaleX, centerOffset.y() * tempScaleY);
 	QWidget::resizeEvent(event);
 }
 
 void CurveWidget::NormalizeView()
 {
-	pixelsOffset = QPointF(size().width() / 2, size().height() / 2);
-	scale = 100.0f;
+	centerOffset = QPointF(size().width() / 2, size().height() / 2);
+	pixelsInUnitScale = 100.0f;
+}
+
+
+void CurveWidget::mousePressEvent(QMouseEvent *event)
+{
+	if (event->button() == Qt::MouseButton::MiddleButton)
+	{
+		isMouseDragging = 1;
+		dragStartMousePos = event->pos();
+		dragStartPixelsOffset = centerOffset;
+	}
 }
 
 QPoint CurveWidget::ToCanvasCoordinates(const QPointF &pos)
 {
-	return QPoint(pos.x() * scale + pixelsOffset.x(), -pos.y() * scale + pixelsOffset.y());
+	return QPoint(pos.x() * pixelsInUnitScale + centerOffset.x(), -pos.y() * pixelsInUnitScale + centerOffset.y());
 }
 
 QPointF CurveWidget::ToAnalyticCoordinates(const QPoint &pos)
 {
-	return QPointF((pos.x() - pixelsOffset.x()) / scale, (-pos.y() + pixelsOffset.y()) / scale);
+	return QPointF((pos.x() - centerOffset.x()) / pixelsInUnitScale, (-pos.y() + centerOffset.y()) / pixelsInUnitScale);
 }

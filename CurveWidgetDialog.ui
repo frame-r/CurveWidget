@@ -33,7 +33,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="CurveWidget" name="widget" native="true"/>
+    <widget class="CurveWidget" name="curveWidget" native="true"/>
    </item>
   </layout>
  </widget>

@@ -19,6 +19,13 @@ CurveWidgetDialog::CurveWidgetDialog(QWidget *parent) :
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
 	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
+
+
+	Curve c;
+	c.points.push_back(QPointF(0.0f, 0.0f));
+	c.points.push_back(QPointF(1.0f, 1.0f));
+	c.points.push_back(QPointF(1.5f, 0.5f));
+	ui->curveWidget->SetCurve(c);
 }
 
 CurveWidgetDialog::~CurveWidgetDialog()
