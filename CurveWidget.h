@@ -52,6 +52,7 @@ class CurveWidget : public QWidget
 	int isMouseDragging{0};
 	QPoint dragStartMousePos;
 	QPointF dragStartPixelsOffset;
+	int dragDotIdx = -1;
 
 	int mouseUnderPoint[4] = {};
 
@@ -63,8 +64,8 @@ public:
 	explicit CurveWidget(QWidget *parent = nullptr);
 
 private slots:
-	void ShowContextMenu(const QPoint &pos);
-	void _OnTimer();
+	void showContextMenu(const QPoint &pos);
+	void onTimer();
 
 protected:
 	void paintEvent(QPaintEvent *e) override;

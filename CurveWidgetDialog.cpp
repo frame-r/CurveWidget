@@ -20,7 +20,6 @@ CurveWidgetDialog::CurveWidgetDialog(QWidget *parent) :
 	QRect screenSize = desktop->availableGeometry(this);
 	resize(QSize(1000, 1000));
 
-
 	Curve c;
 	ui->curveWidget->SetCurve(c);
 }

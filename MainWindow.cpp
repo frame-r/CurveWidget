@@ -16,8 +16,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-	CurveWidgetDialog objMyNewDialog(this);
-	objMyNewDialog.show();
-	objMyNewDialog.exec();
+	CurveWidgetDialog myNewDialog(this);
+	myNewDialog.show();
+	myNewDialog.exec();
 }
 

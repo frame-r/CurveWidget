@@ -7,11 +7,13 @@
 #include <QMenu>
 #include <QAction>
 
-const int MinimumSelectDotsDistance = 6;
+const int MinimumSelectDotsDistance = 9;
 const QColor DotEdgeColor(0, 0, 0);
 const QColor DotColor(255, 255, 255);
-const QColor DotEdgeSelectionColor(0, 0, 0);
-const QColor DotSelectionColor(255, 0, 0);
+const QColor DotEdgeSelectionColor(255, 0, 0);
+const QColor DotSelectionColor(255, 255, 255);
+const QColor GridThinColor(46, 46, 46);
+const int GridWidth = 1;
 
 inline float clamp(float n, float lower, float upper)
 {
@@ -37,7 +39,6 @@ float PointToSegmentDistance(const QPoint& a, const QPoint& b, const QPoint& p)
 	return sqrt( QPointDot( d, d ) );
 }
 
-
 CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 {
 	setMouseTracking(true);
@@ -53,16 +54,16 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 
 	this->setContextMenuPolicy(Qt::CustomContextMenu);
 
-	connect(this, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(ShowContextMenu(const QPoint &)));
+	connect(this, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(showContextMenu(const QPoint &)));
 
 	_timer = std::make_unique<QTimer>(this);
-	connect(_timer.get(), SIGNAL(timeout()), this, SLOT(_OnTimer()));
+	connect(_timer.get(), SIGNAL(timeout()), this, SLOT(onTimer()));
 	_timer->start(16);
 
 	NormalizeView();
 }
 
-void CurveWidget::ShowContextMenu(const QPoint &pos)
+void CurveWidget::showContextMenu(const QPoint &pos)
 {
    QMenu contextMenu(tr("Context menu"), this);
 
@@ -77,7 +78,7 @@ void CurveWidget::ShowContextMenu(const QPoint &pos)
    contextMenu.exec(mapToGlobal(pos));
 }
 
-void CurveWidget::_OnTimer()
+void CurveWidget::onTimer()
 {
 	int _mouseUnderDot[4] = {};
 
@@ -89,26 +90,6 @@ void CurveWidget::_OnTimer()
 
 	for (int i = 0; i<4; i++)
 		_mouseUnderDot[i] = check_dot_intersection(_currentCurve.dots[i]);
-
-
-//	int _mouseUnderSeg = -1;
-//	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
-//	{
-//		CurveSegment seg = _currentCurve.FetchSegment(i);
-//		float dist = PointToSegmentDistance(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1), mousePosition);
-//				if (i == 0)
-//					qDebug() << dist;
-//		if (dist < MinimumSelectDotsDistance)
-//		{
-//			_mouseUnderSeg = i;
-//			break;
-//		}
-//	}
-
-//	if (_mouseUnderDot != -1 && _mouseUnderSeg != -1)
-//	{
-//		_mouseUnderSeg = -1;
-//	}
 
 	if (memcmp(_mouseUnderDot, mouseUnderPoint, sizeof(int) * 4))
 	{
@@ -126,15 +107,11 @@ void drawCorner(const QPoint& center, QPainter* painter)
 void CurveWidget::paintEvent(QPaintEvent *e)
 {
 	QPainter painter(this);
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
-
 	painter.setRenderHint(QPainter::Antialiasing, false);
-	int gridWidth = 1;
+	painter.setPen(QPen(GridThinColor, GridWidth, Qt::SolidLine, Qt::FlatCap));
 
-	QColor gridColorThin(46, 46, 46);
-	painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
-
-	// horizontal
+	// Horizontal lines
+	//
 	float y = ToAnalyticCoordinates(QPoint(0, 0)).y();
 	int y_min = ceil(y);
 	y = ToAnalyticCoordinates(QPoint(0, size().height())).y();
@@ -145,7 +122,8 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 		painter.drawLine(0, pp, size().width(), pp);
 	}
 
-	// vertical
+	// Vertical lines
+	//
 	float x = ToAnalyticCoordinates(QPoint(0, 0)).x();
 	int x_min = ceil(x);
 	x = ToAnalyticCoordinates(QPoint(size().width(), 0)).x();
@@ -156,60 +134,28 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 		painter.drawLine(pp, 0, pp, size().height());
 	}
 
-	//
 	// Axis
 	//
 	QColor gridColorFat(80, 80, 80);
-	painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
+	painter.setPen(QPen(gridColorFat, GridWidth, Qt::SolidLine, Qt::FlatCap));
 	QPoint p = ToCanvasCoordinates(QPointF(0,0));
 	if (0 <= p.x() && p.x() <= size().width())
 		painter.drawLine(p.x(), 0, p.x(), size().height());
 	if (0 <= p.y() && p.y() <= size().height())
 		painter.drawLine(0, p.y(), size().width(), p.y());
 
-	/* Make the Gradient for this line. */
-	//const QPointF start{ 0,0 };
-	//const QPointF end{ 100,100 };
-	//QLinearGradient gradient(start, end);
-	//QColor color(123, 123, 123); //some color
-	//color.setAlphaF(0.1); //change alpha
-	//gradient.setColorAt(0, color);
-	//color.setAlphaF(0.1); //change alpha again
-	//gradient.setColorAt(1, color );
 
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, true);
-
-	//
-	// Lines
-	//
-	//painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
-//	int s = 1;
+	painter.setRenderHint(QPainter::Antialiasing, true);
 	painter.setPen(QPen(Qt::red, 2, Qt::SolidLine, Qt::FlatCap));
 
-//	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
-//	{
-//		int nextSize = 1;
-//		if (mouseUnderSeg == i)
-//		{
-//			nextSize = 2;
-//		}
 
-//		if (nextSize != s)
-//		{
-//			s = nextSize;
-//			painter.setPen(QPen(Qt::red, nextSize, Qt::SolidLine, Qt::FlatCap));
-//		}
-
-//		CurveSegment seg = _currentCurve.FetchSegment(i);
-//		painter.drawLine(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1));
-//	}
+	// Curve segments
+	//
 
 	constexpr float steps = 40;
 	float step = 1.0f / steps;
-
-	// Segments
-	//
 	float t = step;
+
 	for (; t <= 1.0f; t+=step)
 	{
 		QPointF p0 = _currentCurve.Evaluate(t - step);
@@ -226,7 +172,8 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	painter.setPen(QPen(Qt::green, 1, Qt::SolidLine, Qt::RoundCap));
 	painter.drawLine(ToCanvasCoordinates(_currentCurve.A), ToCanvasCoordinates(_currentCurve.P1));
 	painter.drawLine(ToCanvasCoordinates(_currentCurve.B), ToCanvasCoordinates(_currentCurve.P2));
-	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
+	painter.setRenderHint(QPainter::Antialiasing, false);
+
 
 	// Dots
 	//
@@ -234,12 +181,6 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	QColor colEdge = DotEdgeColor;
 	painter.setPen(QPen(colEdge, 1, Qt::SolidLine, Qt::FlatCap));
 	painter.setBrush(QBrush(col));
-
-//	drawCorner(ToCanvasCoordinates(_currentCurve.A), &painter);
-//	drawCorner(ToCanvasCoordinates(_currentCurve.B), &painter);
-//	drawCorner(ToCanvasCoordinates(_currentCurve.P1), &painter);
-//	drawCorner(ToCanvasCoordinates(_currentCurve.P2), &painter);
-
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -262,22 +203,34 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 
 		drawCorner(ToCanvasCoordinates(_currentCurve.dots[i]), &painter);
 	}
-
 }
 
 void CurveWidget::mouseReleaseEvent(QMouseEvent *event)
 {
 	isMouseDragging = 0;
+	dragDotIdx = -1;
 }
 
 void CurveWidget::mouseMoveEvent(QMouseEvent *event)
 {
 	mousePosition = event->pos();
 
-	if (isMouseDragging)
+	if (isMouseDragging == 1)
 	{
 		centerOffset = dragStartPixelsOffset + (event->pos() - dragStartMousePos);
 		repaint();
+	}
+	else if (isMouseDragging == 2)
+	{
+		if (dragDotIdx >= 0)
+		{
+			auto newPos = ToAnalyticCoordinates(mousePosition);
+			if (_currentCurve.dots[dragDotIdx] != newPos)
+			{
+				_currentCurve.dots[dragDotIdx] = newPos;
+				repaint();
+			}
+		}
 	}
 }
 
@@ -316,6 +269,19 @@ void CurveWidget::mousePressEvent(QMouseEvent *event)
 		isMouseDragging = 1;
 		dragStartMousePos = event->pos();
 		dragStartPixelsOffset = centerOffset;
+	}
+	else if (event->button() == Qt::MouseButton::LeftButton)
+	{
+		isMouseDragging = 2;
+		dragStartMousePos = event->pos();
+		for(int i = 0; i < 4; i++)
+		{
+			if (mouseUnderPoint[i])
+			{
+				dragDotIdx = i;
+				break;
+			}
+		}
 	}
 }
 
