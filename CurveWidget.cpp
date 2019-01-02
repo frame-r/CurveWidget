@@ -8,8 +8,10 @@
 #include <QAction>
 
 const int MinimumSelectDotsDistance = 6;
-const QColor cornerColor(0, 0, 0);
-const QColor selectionCornerColor(255, 0, 0);
+const QColor DotEdgeColor(0, 0, 0);
+const QColor DotColor(255, 255, 255);
+const QColor DotEdgeSelectionColor(0, 0, 0);
+const QColor DotSelectionColor(255, 0, 0);
 
 inline float clamp(float n, float lower, float upper)
 {
@@ -47,7 +49,7 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
-	resize(QSize(screenSize.width() * 0.7f, screenSize.height() * 0.7f));
+	resize(QSize(1000, 1000));
 
 	this->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -77,42 +79,40 @@ void CurveWidget::ShowContextMenu(const QPoint &pos)
 
 void CurveWidget::_OnTimer()
 {
-	int _mouseUnderDot = -1;
-	for (int i = 0; i < _currentCurve.PointsNum(); i++)
-	{
-		auto dist = (mousePosition - ToCanvasCoordinates(_currentCurve.FetchPoint(i).pos)).manhattanLength();
-//		if (i == 0)
-//			qDebug() << dist;
-		if (dist < MinimumSelectDotsDistance)
-		{
-			_mouseUnderDot = i;
-			break;
-		}
-	}
+	int _mouseUnderDot[4] = {};
 
-	int _mouseUnderSeg = -1;
-	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
+	auto check_dot_intersection = [&](const QPointF& P) -> int
 	{
-		CurveSegment seg = _currentCurve.FetchSegment(i);
-		float dist = PointToSegmentDistance(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1), mousePosition);
-				if (i == 0)
-					qDebug() << dist;
-		if (dist < MinimumSelectDotsDistance)
-		{
-			_mouseUnderSeg = i;
-			break;
-		}
-	}
+		auto dist = (mousePosition - ToCanvasCoordinates(P)).manhattanLength();
+		return (dist < MinimumSelectDotsDistance);
+	};
 
-	if (_mouseUnderDot != -1 && _mouseUnderSeg != -1)
-	{
-		_mouseUnderSeg = -1;
-	}
+	for (int i = 0; i<4; i++)
+		_mouseUnderDot[i] = check_dot_intersection(_currentCurve.dots[i]);
 
-	if (_mouseUnderDot != mouseUnderDot || _mouseUnderSeg != mouseUnderSeg)
+
+//	int _mouseUnderSeg = -1;
+//	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
+//	{
+//		CurveSegment seg = _currentCurve.FetchSegment(i);
+//		float dist = PointToSegmentDistance(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1), mousePosition);
+//				if (i == 0)
+//					qDebug() << dist;
+//		if (dist < MinimumSelectDotsDistance)
+//		{
+//			_mouseUnderSeg = i;
+//			break;
+//		}
+//	}
+
+//	if (_mouseUnderDot != -1 && _mouseUnderSeg != -1)
+//	{
+//		_mouseUnderSeg = -1;
+//	}
+
+	if (memcmp(_mouseUnderDot, mouseUnderPoint, sizeof(int) * 4))
 	{
-		mouseUnderDot = _mouseUnderDot;
-		mouseUnderSeg = _mouseUnderSeg;
+		memcpy(mouseUnderPoint, _mouseUnderDot, sizeof(int) * 4);
 		repaint();
 	}
 }
@@ -120,7 +120,6 @@ void CurveWidget::_OnTimer()
 void drawCorner(const QPoint& center, QPainter* painter)
 {
 	static const int size1 = 3;
-	painter->setBrush(QBrush("#ffffff"));
 	painter->drawRect(center.x() - size1, center.y() - size1, size1 * 2, size1 * 2);
 }
 
@@ -131,38 +130,6 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 
 	painter.setRenderHint(QPainter::Antialiasing, false);
 	int gridWidth = 1;
-
-	//
-	// Thin grid lines
-	//
-	//QColor gridColorThin(46, 46, 46);
-	//painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	//for (int i = 1; i <= size().width() * 10 / GetAnalyticUnitInPixels(); i++)
-	//{
-	//	painter.drawLine(i * GetAnalyticUnitInPixels() / 10, 0, i * GetAnalyticUnitInPixels() / 10, size().height());
-	//}
-	//painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	//for (int i = 1; i <= size().height() * 10 / GetAnalyticUnitInPixels(); i++)
-	//{
-	//	painter.drawLine(0, i * GetAnalyticUnitInPixels() / 10, size().width(), i * GetAnalyticUnitInPixels() / 10);
-	//}
-
-
-	//
-	// Fat grid lines
-	//
-	//QColor gridColorFat(80, 80, 80);
-	//painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	//for (int i = 1; i <= size().width() / GetAnalyticUnitInPixels(); i++)
-	//{
-	//	painter.drawLine(i * GetAnalyticUnitInPixels(), 0, i * GetAnalyticUnitInPixels(), size().height());
-	//}
-	//painter.setPen(QPen(gridColorFat, gridWidth, Qt::SolidLine, Qt::FlatCap));
-	//for (int i = 1; i <= size().height() / GetAnalyticUnitInPixels(); i++)
-	//{
-	//	painter.drawLine(0, i * GetAnalyticUnitInPixels(), size().width(), i * GetAnalyticUnitInPixels());
-	//}
-
 
 	QColor gridColorThin(46, 46, 46);
 	painter.setPen(QPen(gridColorThin, gridWidth, Qt::SolidLine, Qt::FlatCap));
@@ -216,51 +183,84 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 	// Lines
 	//
 	//painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
-	int s = 1;
-	painter.setPen(QPen(Qt::red, 1, Qt::SolidLine, Qt::FlatCap));
+//	int s = 1;
+	painter.setPen(QPen(Qt::red, 2, Qt::SolidLine, Qt::FlatCap));
 
-	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
+//	for (int i = 0; i < _currentCurve.SugmentsNum(); i++)
+//	{
+//		int nextSize = 1;
+//		if (mouseUnderSeg == i)
+//		{
+//			nextSize = 2;
+//		}
+
+//		if (nextSize != s)
+//		{
+//			s = nextSize;
+//			painter.setPen(QPen(Qt::red, nextSize, Qt::SolidLine, Qt::FlatCap));
+//		}
+
+//		CurveSegment seg = _currentCurve.FetchSegment(i);
+//		painter.drawLine(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1));
+//	}
+
+	constexpr float steps = 40;
+	float step = 1.0f / steps;
+
+	// Segments
+	//
+	float t = step;
+	for (; t <= 1.0f; t+=step)
 	{
-		int nextSize = 1;
-		if (mouseUnderSeg == i)
-		{
-			nextSize = 2;
-		}
-
-		if (nextSize != s)
-		{
-			s = nextSize;
-			painter.setPen(QPen(Qt::red, nextSize, Qt::SolidLine, Qt::FlatCap));
-		}
-
-		CurveSegment seg = _currentCurve.FetchSegment(i);
-		painter.drawLine(ToCanvasCoordinates(seg.q0), ToCanvasCoordinates(seg.q1));
+		QPointF p0 = _currentCurve.Evaluate(t - step);
+		QPointF p1 = _currentCurve.Evaluate(t);
+		painter.drawLine(ToCanvasCoordinates(p0), ToCanvasCoordinates(p1));
+	}
+	{
+		QPointF p0 = _currentCurve.Evaluate(1.0f - step);
+		QPointF p1 = _currentCurve.Evaluate(1.0f);
+		painter.drawLine(ToCanvasCoordinates(p0), ToCanvasCoordinates(p1));
 	}
 
+
+	painter.setPen(QPen(Qt::green, 1, Qt::SolidLine, Qt::RoundCap));
+	painter.drawLine(ToCanvasCoordinates(_currentCurve.A), ToCanvasCoordinates(_currentCurve.P1));
+	painter.drawLine(ToCanvasCoordinates(_currentCurve.B), ToCanvasCoordinates(_currentCurve.P2));
 	painter.setRenderHint(QPainter::HighQualityAntialiasing, false);
 
+	// Dots
 	//
-	// Rectangle dots
-	//
-	QColor col = cornerColor;
-	painter.setPen(QPen(col, 1, Qt::SolidLine, Qt::FlatCap));
+	QColor col = DotColor;
+	QColor colEdge = DotEdgeColor;
+	painter.setPen(QPen(colEdge, 1, Qt::SolidLine, Qt::FlatCap));
+	painter.setBrush(QBrush(col));
 
-	for (int i = 0; i < _currentCurve.PointsNum(); i++)
+//	drawCorner(ToCanvasCoordinates(_currentCurve.A), &painter);
+//	drawCorner(ToCanvasCoordinates(_currentCurve.B), &painter);
+//	drawCorner(ToCanvasCoordinates(_currentCurve.P1), &painter);
+//	drawCorner(ToCanvasCoordinates(_currentCurve.P2), &painter);
+
+
+	for (int i = 0; i < 4; i++)
 	{
-		QColor nextCol = cornerColor;
-		if (mouseUnderDot == i)
+		QColor nextCol = DotColor;
+		QColor nextEdgeCol = DotEdgeColor;
+
+		if (mouseUnderPoint[i])
 		{
-			nextCol = selectionCornerColor;
+			nextCol = DotSelectionColor;
+			nextEdgeCol = DotEdgeSelectionColor;
 		}
 
-		if (col != nextCol)
+		if (col != nextCol || colEdge != nextEdgeCol)
 		{
 			col = nextCol;
-			painter.setPen(QPen(col, 1, Qt::SolidLine, Qt::FlatCap));
+			colEdge = nextEdgeCol;
+			painter.setPen(QPen(colEdge, 1, Qt::SolidLine, Qt::FlatCap));
+			painter.setBrush(QBrush(col));
 		}
 
-		CurvePoint p = _currentCurve.FetchPoint(i);
-		drawCorner(ToCanvasCoordinates(p.pos), &painter);
+		drawCorner(ToCanvasCoordinates(_currentCurve.dots[i]), &painter);
 	}
 
 }
@@ -304,8 +304,8 @@ void CurveWidget::resizeEvent(QResizeEvent *event)
 
 void CurveWidget::NormalizeView()
 {
-	centerOffset = QPointF(size().width() / 2, size().height() / 2);
-	pixelsInUnitScale = 100.0f;
+	centerOffset = QPointF(50, 950);
+	pixelsInUnitScale = 900.0f;
 }
 
 
@@ -328,3 +328,4 @@ QPointF CurveWidget::ToAnalyticCoordinates(const QPoint &pos)
 {
 	return QPointF((pos.x() - centerOffset.x()) / pixelsInUnitScale, (-pos.y() + centerOffset.y()) / pixelsInUnitScale);
 }
+

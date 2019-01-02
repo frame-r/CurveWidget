@@ -9,36 +9,29 @@
 #include <QtCore>
 #include <QPoint>
 
-struct CurveSegment
-{
-	QPointF q0;
-	QPointF q1;
-};
-
-struct CurvePoint
-{
-	QPointF pos;
-};
 
 struct Curve
 {
-	std::vector<QPointF> points;
+	union
+	{
+		struct
+		{
+			QPointF A;
+			QPointF B;
+			QPointF P1;
+			QPointF P2;
+		};
+		QPointF dots[4] = {QPointF(0.0f, 0.0f), QPointF(1.0f, 1.0f), QPointF(0.0f, 1.0f), QPointF(1.0f, 0.0f)};
+	};
 
-	int SugmentsNum() const
-	{
-		return std::max(0, (int)points.size() - 1);
-	}
-	CurveSegment FetchSegment(int num) const
-	{
-		assert(0 <= num && num < SugmentsNum());
-		return CurveSegment{points[num], points[num + 1]};
-	}
+	Curve(){}
 
-	int PointsNum() { return points.size(); }
-	CurvePoint FetchPoint(int num)
+	QPointF Evaluate(float t)
 	{
-		assert(0 <= num && num < PointsNum());
-		return CurvePoint{points[num]};
+		return	1.0f * pow(t, 3.0f) * (B + 3.0f * (P1 - P2) - A) +
+				3.0f * pow(t, 2.0f) * (A - 2.0f * P1 + P2) +
+				3.0f * t * (P1 - A) +
+				A;
 	}
 };
 
@@ -60,8 +53,7 @@ class CurveWidget : public QWidget
 	QPoint dragStartMousePos;
 	QPointF dragStartPixelsOffset;
 
-	int mouseUnderDot{-1};
-	int mouseUnderSeg{-1};
+	int mouseUnderPoint[4] = {};
 
 	std::unique_ptr<QTimer> _timer;
 
@@ -90,17 +82,12 @@ private:
 
 	// Analytic Coordinate System	- The coordinate system in which the coordinates of the curve are specified
 	// Canvas Coordinate System		- Coordinates inside the widget. Top left - (0, 0)
-
 	//
 	QPoint ToCanvasCoordinates(const QPointF& analyticPos);
-
-	//
 	QPointF ToAnalyticCoordinates(const QPoint& canvasPos);
 
 	float GetAnalyticUnitInPixels() { return pixelsInUnitScale; }
 	float GetPixelInAnalyticUnit() { return 1 / pixelsInUnitScale; }
-
-
 };
 
 #endif // CURVEWIDGET_H
