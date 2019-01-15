@@ -7,7 +7,7 @@
 #include <QWidget>
 #include <QtGui>
 #include <QtCore>
-#include <QPoint>
+#include <QVector2D>
 
 
 struct Curve
@@ -16,17 +16,17 @@ struct Curve
 	{
 		struct
 		{
-			QPointF A;
-			QPointF B;
-			QPointF P1;
-			QPointF P2;
+			QVector2D A;
+			QVector2D B;
+			QVector2D P1;
+			QVector2D P2;
 		};
-		QPointF dots[4] = {QPointF(0.0f, 0.0f), QPointF(1.0f, 1.0f), QPointF(0.0f, 1.0f), QPointF(1.0f, 0.0f)};
+		QVector2D dots[4] = {QVector2D(0.0f, 0.0f), QVector2D(1.0f, 1.0f), QVector2D(0.0f, 1.0f), QVector2D(1.0f, 0.0f)};
 	};
 
 	Curve(){}
 
-	QPointF Evaluate(float t)
+	QVector2D Evaluate(float t)
 	{
 		return	1.0f * pow(t, 3.0f) * (B + 3.0f * (P1 - P2) - A) +
 				3.0f * pow(t, 2.0f) * (A - 2.0f * P1 + P2) +
@@ -44,21 +44,21 @@ class CurveWidget : public QWidget
 	float pixelsInUnitScale{100};
 
 	// Offset analytic coordinate system relative to Top Left widget point in pixels
-	QPointF centerOffset;
+	QVector2D centerOffset;
 
 	QPoint mousePosition;
 
 	// Dragging data
-	int isMouseDragging{0};
+	int isDragging{0}; // 1 - left, 2 - wheel
 	QPoint dragStartMousePos;
-	QPointF dragStartPixelsOffset;
+	QVector2D dragStartPixelsOffset;
 	int dragDotIdx = -1;
 
 	int mouseUnderPoint[4] = {};
 
-	std::unique_ptr<QTimer> _timer;
+	std::unique_ptr<QTimer> timer;
 
-	Curve _currentCurve;
+	Curve currentCurve;
 
 public:
 	explicit CurveWidget(QWidget *parent = nullptr);
@@ -76,7 +76,7 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 
 public:
-	void SetCurve(const Curve& curve) { _currentCurve = curve; }
+	void SetCurve(const Curve& curve) { currentCurve = curve; }
 	void NormalizeView();
 
 private:
@@ -84,8 +84,8 @@ private:
 	// Analytic Coordinate System	- The coordinate system in which the coordinates of the curve are specified
 	// Canvas Coordinate System		- Coordinates inside the widget. Top left - (0, 0)
 	//
-	QPoint ToCanvasCoordinates(const QPointF& analyticPos);
-	QPointF ToAnalyticCoordinates(const QPoint& canvasPos);
+	QPoint ToCanvasCoordinates(const QVector2D& analyticPos);
+	QVector2D ToAnalyticCoordinates(const QPoint& canvasPos);
 
 	float GetAnalyticUnitInPixels() { return pixelsInUnitScale; }
 	float GetPixelInAnalyticUnit() { return 1 / pixelsInUnitScale; }
