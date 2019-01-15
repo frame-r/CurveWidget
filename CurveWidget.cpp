@@ -14,6 +14,7 @@ const QColor DotEdgeSelectionColor(255, 0, 0);
 const QColor DotSelectionColor(255, 255, 255);
 const QColor GridThinColor(46, 46, 46);
 const int GridWidth = 1;
+const int DotSize = 3;
 
 inline float clamp(float n, float lower, float upper)
 {
@@ -80,7 +81,7 @@ void CurveWidget::showContextMenu(const QPoint &pos)
 
 void CurveWidget::onTimer()
 {
-	int _mouseUnderDot[4] = {};
+	int isMouseUnderDot[4] = {};
 
 	auto check_dot_intersection = [&](const QPointF& P) -> int
 	{
@@ -89,19 +90,18 @@ void CurveWidget::onTimer()
 	};
 
 	for (int i = 0; i<4; i++)
-		_mouseUnderDot[i] = check_dot_intersection(_currentCurve.dots[i]);
+		isMouseUnderDot[i] = check_dot_intersection(_currentCurve.dots[i]);
 
-	if (memcmp(_mouseUnderDot, mouseUnderPoint, sizeof(int) * 4))
+	if (memcmp(isMouseUnderDot, mouseUnderPoint, sizeof(int) * 4))
 	{
-		memcpy(mouseUnderPoint, _mouseUnderDot, sizeof(int) * 4);
+		memcpy(mouseUnderPoint, isMouseUnderDot, sizeof(int) * 4);
 		repaint();
 	}
 }
 
-void drawCorner(const QPoint& center, QPainter* painter)
+void drawDot(const QPoint& center, QPainter* painter)
 {
-	static const int size1 = 3;
-	painter->drawRect(center.x() - size1, center.y() - size1, size1 * 2, size1 * 2);
+	painter->drawRect(center.x() - DotSize, center.y() - DotSize, DotSize * 2, DotSize * 2);
 }
 
 void CurveWidget::paintEvent(QPaintEvent *e)
@@ -151,9 +151,8 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 
 	// Curve segments
 	//
-
-	constexpr float steps = 40;
-	float step = 1.0f / steps;
+	constexpr float steps = 40.0f;
+	constexpr float step = 1.0f / steps;
 	float t = step;
 
 	for (; t <= 1.0f; t+=step)
@@ -167,7 +166,6 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 		QPointF p1 = _currentCurve.Evaluate(1.0f);
 		painter.drawLine(ToCanvasCoordinates(p0), ToCanvasCoordinates(p1));
 	}
-
 
 	painter.setPen(QPen(Qt::green, 1, Qt::SolidLine, Qt::RoundCap));
 	painter.drawLine(ToCanvasCoordinates(_currentCurve.A), ToCanvasCoordinates(_currentCurve.P1));
@@ -201,7 +199,7 @@ void CurveWidget::paintEvent(QPaintEvent *e)
 			painter.setBrush(QBrush(col));
 		}
 
-		drawCorner(ToCanvasCoordinates(_currentCurve.dots[i]), &painter);
+		drawDot(ToCanvasCoordinates(_currentCurve.dots[i]), &painter);
 	}
 }
 
