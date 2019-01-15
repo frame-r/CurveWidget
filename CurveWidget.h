@@ -74,7 +74,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
 	void resizeEvent(QResizeEvent *event) override;
-
+	void showEvent(QShowEvent *event) override;
 public:
 	void SetCurve(const Curve& curve) { currentCurve = curve; }
 	void NormalizeView();

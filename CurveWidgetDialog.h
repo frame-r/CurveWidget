@@ -17,6 +17,8 @@ public:
 
 private slots:
 
+	void on_toolButton_clicked();
+
 private:
 	Ui::CurveWidgetDialog *ui;
 };

@@ -14,11 +14,12 @@ CurveWidgetDialog::CurveWidgetDialog(QWidget *parent) :
 
 	Qt::WindowFlags flags = windowFlags();
 	flags = flags & (~Qt::WindowContextHelpButtonHint);
+	flags = flags | (Qt::WindowMaximizeButtonHint);
 	setWindowFlags(flags);
 
 	QDesktopWidget *desktop = QApplication::desktop();
 	QRect screenSize = desktop->availableGeometry(this);
-	resize(QSize(1000, 1000));
+	resize(screenSize.width() * 0.8f, screenSize.height() * 0.8f);
 
 	Curve c;
 	ui->curveWidget->SetCurve(c);
@@ -29,3 +30,8 @@ CurveWidgetDialog::~CurveWidgetDialog()
 	delete ui;
 }
 
+
+void CurveWidgetDialog::on_toolButton_clicked()
+{
+	ui->curveWidget->NormalizeView();
+}

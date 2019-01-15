@@ -39,9 +39,12 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 	setAutoFillBackground(true);
 	setPalette(Pal);
 
+	//this->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+
 //	QDesktopWidget *desktop = QApplication::desktop();
 //	QRect screenSize = desktop->availableGeometry(this);
-	resize(QSize(1000, 1000));
+//	//resize(QSize(float(screenSize.x()) * 0.8f, float(screenSize.y()) * 0.8f));
+	//resize(200, 100);
 
 	this->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -50,8 +53,6 @@ CurveWidget::CurveWidget(QWidget *parent) : QWidget(parent)
 	timer = std::make_unique<QTimer>(this);
 	connect(timer.get(), SIGNAL(timeout()), this, SLOT(onTimer()));
 	timer->start(16);
-
-	NormalizeView();
 }
 
 void CurveWidget::showContextMenu(const QPoint &pos)
@@ -240,10 +241,38 @@ void CurveWidget::resizeEvent(QResizeEvent *event)
 	QWidget::resizeEvent(event);
 }
 
+void CurveWidget::showEvent(QShowEvent *event)
+{
+	centerOffset = QVector2D(rect().width() * 0.5f, rect().height() * 0.5f);
+	NormalizeView();
+	QWidget::showEvent(event);
+}
+
 void CurveWidget::NormalizeView()
 {
-	centerOffset = QVector2D(50, 950);
-	pixelsInUnitScale = 900.0f;
+	QVector2D bottomLeft = currentCurve.A;
+	QVector2D topRight = currentCurve.B;
+	QVector2D size_ = topRight - bottomLeft;
+
+	auto minSide = std::min(rect().width(), rect().height());
+	auto maxSide = std::max(rect().width(), rect().height());
+
+	float aspectWidget = static_cast<float>(rect().width()) / rect().height();
+	float aspect = size_.x() / size_.y();
+
+	qDebug() << "aspectWidget" << aspectWidget << "aspectCurve" << aspect;
+
+//	if (aspectWidget > aspect)
+//	{
+//		centerOffset = QVector2D((rect().width() - aspect * minSide) * 0.5f, minSide);
+//		pixelsInUnitScale = minSide / size_.y();
+//	} else
+//	{ // todo
+//		centerOffset = QVector2D(50, 950);
+//		pixelsInUnitScale = minSide;
+//	}
+
+	repaint();
 }
 
 void CurveWidget::mousePressEvent(QMouseEvent *event)
